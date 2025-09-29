@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lista de Desejos | Nayra & Willian</title>
+  <style>
+    body { font-family: Arial, sans-serif; background: #fafafa; margin: 0; }
+    .container { max-width: 900px; margin: auto; padding: 20px; }
+    h1 { color: #e67e22; text-align: center; }
+    h2 { color: #2c3e50; margin-top: 30px; }
+    ul { list-style: none; padding: 0; }
+    li { background: #fff; border: 1px solid #ddd; margin: 5px 0; padding: 10px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; }
+    li.reservado { background: #eee; color: #666; }
+    li.reservado span { font-size: 0.9em; color: #555; margin-left: 10px; font-style: italic; }
+    button { margin-top: 20px; background: #e67e22; color: #fff; padding: 12px 25px; border: none; border-radius: 8px; cursor: pointer; display: block; margin-left: auto; margin-right: auto; }
+    button:hover { background: #d35400; }
+    #nome { display: block; margin: 20px auto; padding: 10px; width: 80%; max-width: 400px; border-radius: 8px; border: 1px solid #ccc; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Lista de Desejos</h1>
+    <p style="text-align:center">Selecione os itens, informe seu nome e clique em <strong>Confirmar Reserva</strong>. Cada item só pode ser reservado uma vez!</p>
+
+    <h2>🍴 Cozinha</h2>
+    <ul id="cozinha"></ul>
+
+    <h2>🛋️ Quarto e Sala</h2>
+    <ul id="quarto-sala"></ul>
+
+    <h2>🚿 Banheiro</h2>
+    <ul id="banheiro"></ul>
+
+    <input type="text" id="nome" placeholder="Digite seu nome para confirmar a reserva">
+    <button id="confirmar">✅ Confirmar Reserva</button>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-app.js";
+    import { getDatabase, ref, onValue, set } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-database.js";
+
+    // Configuração do Firebase
+    const firebaseConfig = {
+      apiKey: "AIzaSyC8IjdomTX1ohGgnSBAu5TBQqZsVcCaH0I",
+      authDomain: "lista-de-desejos-de522.firebaseapp.com",
+      databaseURL: "https://lista-de-desejos-de522-default-rtdb.firebaseio.com",
+      projectId: "lista-de-desejos-de522",
+      storageBucket: "lista-de-desejos-de522.firebasestorage.app",
+      messagingSenderId: "817616674827",
+      appId: "1:817616674827:web:00516c6dd3bba62d08a70e",
+      measurementId: "G-Y27KTJZLSQ"
+    };
+
+    // Inicializa Firebase
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    // Itens da lista
+    const categorias = {
+      cozinha: [
+        "Jogo de talheres 24 peças","Kit cozinha Completo + tábua","Jogo de panela completo antiaderente","Panela de pressão","Panela elétrica de arroz","Porta tempero + saleiro","Kit pote hermético","Liquidificador","Lancheira","Cafeteira","Air frear","Escorredor de louça + jogo de pia","Pano de prato + Jogo de taça (4)","Jogo de xícaras + taça de sobremesa","Jogo de prato (cerâmica) (4-6)","Jarra","Pano de prato + jogo de copo (4-6)","Jogo de travessa","Lixeira cozinha","Escorredor de macarrão e arroz + copo medidor","Galheteiro","Potes multiuso P, M, G","Fruteira + jogo de mesa","Kit de tábua para aperitivos","Boleira + descanso de panela","Ralador + triturador de alho e cebola"
+      ],
+      "quarto-sala": [
+        "3 Jogo de lençol","Porta chaves + mesa de canto","Lixeira + jogo de tapete","Cortina","Um edredom","Almofadas + manta sofá","Travesseiro","Ferro de passar + tábua de passar","2 Puff (baú) + esteira suporte sofá","Cesto de roupa","Aspirador de pó","TV 43 polegadas"
+      ],
+      banheiro: [
+        "Kit 3 Nichos triplos Prateleiras para Banheiro Organizador em Preto","3 Jogo de toalha (Banho e rosto)","Lixeira + escova sanitária","Escova elétrica + kit pote para produtos de limpeza"
+      ]
+    };
+
+    // Renderizar listas
+    Object.keys(categorias).forEach(cat => {
+      const ul = document.getElementById(cat);
+      categorias[cat].forEach(item => {
+        const li = document.createElement("li");
+        li.innerHTML = `<label><input type="checkbox" value="${item}"> ${item}</label> <span></span>`;
+        ul.appendChild(li);
+      });
+    });
+
+    // Escuta mudanças no banco em tempo real
+    onValue(ref(db, "reservas"), snapshot => {
+      const reservas = snapshot.val() || {};
+      document.querySelectorAll("li").forEach(li => {
+        const checkbox = li.querySelector("input");
+        const span = li.querySelector("span");
+        if (reservas[checkbox.value]) {
+          li.classList.add("reservado");
+          checkbox.disabled = true;
+          span.textContent = `(Reservado por ${reservas[checkbox.value]})`;
+        } else {
+          li.classList.remove("reservado");
+          checkbox.disabled = false;
+          span.textContent = "";
+        }
+      });
+    });
+
+    // Botão Confirmar
+    document.getElementById("confirmar").addEventListener("click", () => {
+      const nome = document.getElementById("nome").value.trim();
+      if (!nome) {
+        alert("Por favor, digite seu nome!");
+        return;
+      }
+
+      const selecionados = [...document.querySelectorAll("input[type=checkbox]:checked")];
+      if (selecionados.length === 0) {
+        alert("Selecione pelo menos 1 item!");
+        return;
+      }
+
+      selecionados.forEach(item => {
+        set(ref(db, "reservas/" + item.value), nome);
+      });
+
+      alert("Reserva confirmada! ✔️ Obrigado, " + nome);
+      document.getElementById("nome").value = "";
+    });
+  </script>
+</body>
+</html>
